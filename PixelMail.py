@@ -7,8 +7,6 @@ from email.message import EmailMessage
 import os.path
 from os import path
 from pathlib import Path
-import base64
-import email
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
