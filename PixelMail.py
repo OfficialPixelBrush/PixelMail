@@ -9,6 +9,8 @@ from os import path
 from pathlib import Path
 import base64
 import email
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 
@@ -25,17 +27,17 @@ if os.path.isfile("pixelmail_session"):
     passwd_txt = session_file.readline()
     server_smtp_txt = session_file.readline()
     server_imap_txt = session_file.readline()
-    port_ent_txt = session_file.readline()
+    server_port_txt = session_file.readline()
     sender_txt = sender_txt.strip()
     passwd_txt = passwd_txt.strip()
     server_smtp_txt = server_smtp_txt.strip()
     server_imap_txt = server_imap_txt.strip()
-    port_ent_txt = port_ent_txt.strip()
+    server_port_txt = server_port_txt.strip()
     sender_txt = sender_txt.replace(" ", "")
     passwd_txt = passwd_txt.replace(" ", "")
     server_smtp_txt = server_smtp_txt.replace(" ", "")
     server_imap_txt = server_imap_txt.replace(" ", "")
-    port_ent_txt = port_ent_txt.replace(" ", "")
+    server_port_txt = server_port_txt.replace(" ", "")
     session_file.close()
     print("Loaded Session File")
 
@@ -49,33 +51,68 @@ tab2 = ttk.Frame(tabControl)            # Create a tab
 tabControl.add(tab2, text='Receiving')      # Add the tab
 tabControl.pack(expand=1, fill=BOTH)  # Pack to make visible
 
-def sendMail():
-    recept = recipient.get()
-    msg = 'Subject: {}\n\n{}'.format(subject.get(), message.get('1.0',END))
-    user = sender.get()
-    password = passwd.get()
-    smtp = server_smtp.get()
-    port = port_ent.get()
+def port587():
+    print("No SLL detected")
+    print("Compiling Mail...")
+    msg = MIMEMultipart()
+    message = mail_message.get('1.0',END)
+    msg['From']=sender.get()
+    msg['To']=recipient.get()
+    msg['Subject']=subject.get()
+    msg.attach(MIMEText(message, 'plain'))
+    print("Mail Compiled")
     print("Connecting to Server...")
-    smtp = smtplib.SMTP_SSL(smtp, port)
+    server = smtplib.SMTP(host=server_smtp.get(), port=server_port.get())
     print("Greeting Server...")
-    smtp.ehlo()
+    server.ehlo(server_smtp.get())
+    server.starttls()
     print("Logging in...")
-    smtp.login(user, password)
+    server.login(sender.get(), passwd.get())
     print("Sending Mail...")
-    smtp.sendmail(user, recept, msg)
+    server.send_message(msg)
     text_report_label.config(text="Mail sent")
     print("Mail sent")
-    smtp.quit()
+    server.quit()
     print("Disconnected from Server")
+
+
+def portOther():
+    print("SLL detected")
+    print("Compiling Mail...")
+    msg = MIMEMultipart()
+    message = mail_message.get('1.0',END)
+    msg['From']=sender.get()
+    msg['To']=recipient.get()
+    msg['Subject']=subject.get()
+    msg.attach(MIMEText(message, 'plain'))
+    print("Mail Compiled")
+    print("Connecting to Server...")
+    server = smtplib.SMTP_SSL(host=server_smtp.get(), port=server_port.get())
+    print("Greeting Server...")
+    server.ehlo()
+    print("Logging in...")
+    server.login(sender.get(), passwd.get())
+    print("Sending Mail...")
+    server.send_message(msg)
+    text_report_label.config(text="Mail sent")
+    print("Mail sent")
+    server.quit()
+    print("Disconnected from Server")
+    
+
+def sendMail():
+    if server_port.get() != "587":
+        portOther()
+    else:
+        port587()
 
 def setGoogle():
     server_smtp.delete(0,END)
     server_smtp.insert(0,google_default_smtp)
     server_imap.delete(0,END)
     server_imap.insert(0,google_default_imap)
-    port_ent.delete(0,END)
-    port_ent.insert(0,google_port_smtp)
+    server_port.delete(0,END)
+    server_port.insert(0,google_port_smtp)
 
 def showPasswd():
     if showPassword.get() == 1:
@@ -90,8 +127,8 @@ def loadMail():
     recipient.insert(0,mail_file.readline())
     subject.delete(0,END)
     subject.insert(0,mail_file.readline())  
-    message.delete('1.0',END)
-    message.insert('1.0',mail_file.read()) 
+    mail_message.delete('1.0',END)
+    mail_message.insert('1.0',mail_file.read()) 
     mail_file.close() 
     temp_rep = recipient.get().strip().replace(" ", "")
     recipient.delete(0,END)
@@ -104,7 +141,7 @@ def saveMail():
     mail_file = open("pixelmail_mail", "w")
     mail_file.write(recipient.get() + "\n")
     mail_file.write(subject.get() + "\n")
-    mail_file.write(message.get("1.0",END))
+    mail_file.write(mail_message.get("1.0",END))
     mail_file.close() 
     text_report_label.config(text="Mail saved")
     print("Mail File Saved")
@@ -116,7 +153,7 @@ def saveLogin():
     session_file.write(passwd.get() + "\n")
     session_file.write(server_smtp.get() + "\n")
     session_file.write(server_imap.get() + "\n")
-    session_file.write(port_ent.get())
+    session_file.write(server_port.get())
     session_file.close() 
     print("Written to Session File")
     text_report_label.config(text="Login Saved")
@@ -138,8 +175,8 @@ server_imap.grid(row=3, column=1)
 
 port_label = Label(info, text="Server Port")
 port_label.grid(row=2, sticky=W)
-port_ent = Entry(info, width=50)
-port_ent.grid(row=2, column=1)
+server_port = Entry(info, width=50)
+server_port.grid(row=2, column=1)
 
 google_button = Button(info, text ="Gmail Default", command = setGoogle)
 google_button.grid(row=2, column=3)
@@ -182,8 +219,8 @@ load_Mail.grid(row=10, sticky=E, pady=5, padx=5)
 save_Mail = Button(tab1, text ="Save E-Mail", command = saveMail, width=20)
 save_Mail.grid(row=10, sticky=W, pady=5, padx=5)
 
-message = Text(tab1)
-message.grid(row=14,padx=10)
+mail_message = Text(tab1)
+mail_message.grid(row=14,padx=10)
 
 send = Button(tab1, text ="Send", command = sendMail)
 send.grid(row=15, sticky=EW, pady=5, padx=5)
@@ -200,12 +237,12 @@ if os.path.isfile("pixelmail_session"):
     passwd.delete(0,END)
     server_smtp.delete(0,END)
     server_imap.delete(0,END)
-    port_ent.delete(0,END)
+    server_port.delete(0,END)
     sender.insert(0,sender_txt)
     passwd.insert(0,passwd_txt)
     server_smtp.insert(0,server_smtp_txt)
     server_imap.insert(0,server_imap_txt)
-    port_ent.insert(0,port_ent_txt)
+    server_port.insert(0,server_port_txt)
 
 
 # RECEIVING MAIL TAB (tab2)    
