@@ -6,6 +6,7 @@ Requirements:
 - smtplib
 - easyimap
 - os
+- email
 
 How to install:
 pip install easyimap
