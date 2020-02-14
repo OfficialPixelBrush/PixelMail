@@ -333,7 +333,6 @@ mail_slide.grid(row=4,column=1)
 limit_slide = Scale(tab2, from_=5, to=50, length=500, orient=HORIZONTAL, tickinterval=5)
 limit_slide.grid(row=5, sticky=N,column=2)
 limit_slide.set(10)
-getMails()
 # Full Mail Viewer Checkbox
 show_contents = Checkbutton(tab2, text ="Full Mail", command=mail_slider, variable=fullM)
 show_contents.grid(row=3, column=1)
